@@ -1,42 +1,88 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+:root {
+  --color-hit: #6aaa64;
+  --color-present: #c9b458;
+  --color-miss: #3a3a3c;
+  --color-empty-border: #3a3a3c;
+  --color-pending-border: #565758;
+  --color-background: #121213;
+  --color-text: #ffffff;
+  --tile-size: 60px;
+  --tile-gap: 5px;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+  max-width: 500px;
+  justify-content: space-between;
+}
+
+.app-container header {
+  border-bottom: 1px solid var(--color-miss);
+  width: 100%;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1rem;
+  flex-grow: 1;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.board {
+  display: grid;
+  grid-template-rows: repeat(6, 1fr);
+  gap: var(--tile-gap);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--tile-gap);
 }
 
-.card {
-  padding: 2em;
+.tile {
+  width: var(--tile-size);
+  height: var(--tile-size);
+  border: 2px solid var(--color-empty-border);
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: var(--color-text);
 }
 
-.read-the-docs {
-  color: #888;
+.tile.pending { border-color: var(--color-pending-border); }
+.tile.hit { background-color: var(--color-hit); border-color: var(--color-hit); }
+.tile.present { background-color: var(--color-present); border-color: var(--color-present); }
+.tile.miss { background-color: var(--color-miss); border-color: var(--color-miss); }
+
+.error-message { color: #ff7575; margin-top: 1rem; }
+.game-over-message { font-size: 1.5rem; margin-top: 1rem; }
+
+button {
+  background-color: #818384;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
 }
