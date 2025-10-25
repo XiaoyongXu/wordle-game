@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { WordleGame } from '../controllers/wordleController';
+// The list of 5-letter words is sourced from:
+// https://darkermango.github.io/5-Letter-words/words.json
 import { words as WORDS } from '../utils/wordsWith5Letters.json'
 
 const games = new Map<string, WordleGame>();
@@ -9,11 +11,12 @@ const router = Router();
 
 router.post('/',(req, res) => {
   try {
-    // 1. Get configurable settings
+    // 1. Get configurable settings from request body
     const MAX_GUESSES = 6;
+    const { isCheating = false } = req.body; // Default to false if not provided
 
     // 2. Create new game instance
-    const game = new WordleGame(WORDS, MAX_GUESSES);
+    const game = new WordleGame(WORDS, MAX_GUESSES, isCheating ?? false);
     const gameId = uuidv4();
 
     // 3. Store the game session
@@ -51,7 +54,6 @@ router.post('/:gameId/guesses', (req, res) => {
 
     // 4. Get the updated state and send it to the client
     const state = game.getGameState(gameId);
-    console.log('state', state)
     res.status(200).json(state);
 
   } catch (err) {

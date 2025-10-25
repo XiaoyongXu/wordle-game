@@ -24,9 +24,13 @@ export interface ErrorResponse {
 
 export type GuessResponse = GameStateResponse | ErrorResponse;
 
-export async function startNewGame(): Promise<NewGameResponse> {
+export async function startNewGame(isCheating: boolean): Promise<NewGameResponse> {
   const response = await fetch(`${API_BASE_URL}/games`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ isCheating }),
   });
   if (!response.ok) {
     throw new Error('Failed to start a new game.');

@@ -1,11 +1,11 @@
 :root {
   --color-hit: #6aaa64;
   --color-present: #c9b458;
-  --color-miss: #3a3a3c;
-  --color-empty-border: #3a3a3c;
-  --color-pending-border: #565758;
-  --color-background: #121213;
-  --color-text: #ffffff;
+  --color-miss: #787c7e;
+  --color-empty-border: #d3d6da;
+  --color-pending-border: #878a8c;
+  --color-background: #ffffff;
+  --color-text: #000000;
   --tile-size: 60px;
   --tile-gap: 5px;
 }
@@ -22,16 +22,29 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 100vh;
   width: 100%;
   max-width: 500px;
-  justify-content: space-between;
+  gap: 2rem;
+  padding-top: 2rem;
 }
 
 .app-container header {
   border-bottom: 1px solid var(--color-miss);
   width: 100%;
   text-align: center;
+}
+
+.app-container header button {
+  margin-bottom: 1rem;
+}
+
+.pre-game-container {
+  text-align: center;
+}
+
+.pre-game-container .button-group {
+  display: flex;
+  gap: 1rem;
 }
 
 .game-container {
@@ -67,12 +80,13 @@ body {
   font-weight: bold;
   text-transform: uppercase;
   color: var(--color-text);
+  background-color: var(--color-background);
 }
 
 .tile.pending { border-color: var(--color-pending-border); }
-.tile.hit { background-color: var(--color-hit); border-color: var(--color-hit); }
-.tile.present { background-color: var(--color-present); border-color: var(--color-present); }
-.tile.miss { background-color: var(--color-miss); border-color: var(--color-miss); }
+.tile.hit { background-color: var(--color-hit); border-color: var(--color-hit); color: white; }
+.tile.present { background-color: var(--color-present); border-color: var(--color-present); color: white; }
+.tile.miss { background-color: var(--color-miss); border-color: var(--color-miss); color: white; }
 
 .error-message { color: #ff7575; margin-top: 1rem; }
 .game-over-message { font-size: 1.5rem; margin-top: 1rem; }
