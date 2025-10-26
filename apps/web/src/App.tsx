@@ -11,7 +11,10 @@ import type {
   LetterState,
   GameStatus,
   MultiplayerGameState,
+  PlayerStats,
 } from "./api-client.ts";
+import { loadStats, saveStats, updateStats } from "./statsService";
+import { StatsModal } from "./components/StatsModal";
 
 function App() {
   // 'menu' | 'sp-game' | 'mp-menu' | 'mp-waiting' | 'mp-game'
@@ -37,6 +40,8 @@ function App() {
   const [mpGameState, setMpGameState] = useState<MultiplayerGameState | null>(
     null
   );
+  const [stats, setStats] = useState<PlayerStats>(loadStats());
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
 
   // Configurable game settings, fetched from server
   const [wordLength, setWordLength] = useState(5);
@@ -143,6 +148,17 @@ function App() {
     setAnswer(response.answer ?? null);
   };
 
+  // Effect to update stats when a single-player game ends
+  useEffect(() => {
+    if (view === 'sp-game' && (status === 'win' || status === 'loss')) {
+      const newStats = updateStats(stats, status === 'win', guesses.length);
+      setStats(newStats);
+      saveStats(newStats);
+      // Show stats modal after a short delay
+      setTimeout(() => setIsStatsModalOpen(true), 1500);
+    }
+  }, [status, view]);
+
   useEffect(() => {
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
@@ -246,6 +262,9 @@ function App() {
           {gameMode === "multiplayer" && "Multiplayer Wordle"}
           {!gameMode && "Wordle"}
         </h1>
+        <button className="stats-button" onClick={() => setIsStatsModalOpen(true)}>
+          📊
+        </button>
       </header>
 
       {view === "sp-game" && gameId && (
@@ -368,6 +387,10 @@ function App() {
           {error && <div className="error-message">{error}</div>}
           <button onClick={() => setView("menu")}>Back to Menu</button>
         </main>
+      )}
+
+      {isStatsModalOpen && (
+        <StatsModal stats={stats} onClose={() => setIsStatsModalOpen(false)} />
       )}
 
       {view === "mp-waiting" && (

@@ -32,6 +32,16 @@ body {
   border-bottom: 1px solid var(--color-miss);
   width: 100%;
   text-align: center;
+  position: relative;
+}
+
+.app-container header .stats-button {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
 }
 
 .app-container header button {

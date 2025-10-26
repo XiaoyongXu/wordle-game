@@ -49,6 +49,24 @@ export interface MultiplayerGameState {
   gameType: 'race' | 'head-to-head';
 }
 
+export interface GuessDistribution {
+  1: number;
+  2: number;
+  3: number;
+  4: number;
+  5: number;
+  6: number;
+  fail: number;
+}
+
+export interface PlayerStats {
+  gamesPlayed: number;
+  winPercentage: number;
+  currentStreak: number;
+  maxStreak: number;
+  guessDistribution: GuessDistribution;
+}
+
 
 export async function startNewGame(isCheating: boolean): Promise<NewGameResponse> {
   const response = await fetch(`${API_BASE_URL}/games`, {

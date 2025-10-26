@@ -1,0 +1,78 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--color-background);
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 480px;
+  position: relative;
+  color: var(--color-text);
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.stats-grid {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.stat-item .stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.stat-item .stat-label {
+  font-size: 0.8rem;
+}
+
+.distribution-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.graph-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.graph-label {
+  font-weight: bold;
+}
+
+.graph-bar-container {
+  flex-grow: 1;
+}
+
+.graph-bar {
+  background-color: var(--color-miss);
+  color: white;
+  text-align: right;
+  padding: 2px 8px;
+  font-weight: bold;
+  min-width: 20px;
+}
