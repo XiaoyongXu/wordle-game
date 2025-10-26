@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import { Board } from './components/Board';
-import { startNewGame, submitGuess } from './api-client.ts';
-import type { LetterState, GameStatus } from './api-client.ts';
+import { startNewGame, submitGuess, createMultiplayerGame, joinMultiplayerGame } from './api-client.ts';
+import type { LetterState, GameStatus, MultiplayerGameState } from './api-client.ts';
 
 function App() {
+  // 'menu' | 'sp-game' | 'mp-menu' | 'mp-waiting' | 'mp-game'
+  const [view, setView] = useState('menu');
   const [gameId, setGameId] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<string[]>([]);
   const [results, setResults] = useState<LetterState[][]>([]);
@@ -12,7 +14,16 @@ function App() {
   const [status, setStatus] = useState<GameStatus | 'loading' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
-  const [gameMode, setGameMode] = useState<'normal' | 'cheating' | null>(null);
+  const [gameMode, setGameMode] = useState<'normal' | 'cheating' | 'multiplayer' | null>(null);
+
+  // State for multiplayer
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [mpWord, setMpWord] = useState('');
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+  const [roomIdInput, setRoomIdInput] = useState('');
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [mpGameState, setMpGameState] = useState<MultiplayerGameState | null>(null);
 
   // Configurable game settings, fetched from server
   const [wordLength, setWordLength] = useState(5);
@@ -31,6 +42,7 @@ function App() {
       setGameId(newGame.gameId);
       setWordLength(newGame.wordLength);
       setMaxGuesses(newGame.maxGuesses);
+      setView('sp-game');
       setStatus('playing');
     } catch (err) {
       setError('Failed to start a new game. Please try again.');
@@ -39,12 +51,55 @@ function App() {
     }
   }, []);
 
+  const handleCreateRoom = async () => {
+    setError(null);
+    try {
+      const { roomId } = await createMultiplayerGame(mpWord.toLowerCase());
+      setRoomId(roomId);
+      setView('mp-waiting');
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    setError(null);
+    if (!roomIdInput) return;
+    try {
+      // First, validate the room via HTTP
+      await joinMultiplayerGame(roomIdInput, mpWord.toLowerCase());
+      // If successful, set the real roomId to trigger the WebSocket connection
+      setRoomId(roomIdInput);
+      setView('mp-waiting');
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   const handleKeyPress = (e: KeyboardEvent) => {
-    if (status !== 'playing') return;
+    // Determine if the game is active, for either mode.
+    const isSpPlaying = view === 'sp-game' && status === 'playing';
+    const myMpPlayer = mpGameState?.players.find(p => p.id === playerId);
+    const isMpPlaying = view === 'mp-game' && myMpPlayer?.status === 'playing';
+
+    if (!isSpPlaying && !isMpPlaying) {
+      return;
+    }
 
     if (e.key === 'Enter') {
       if (currentGuess.length === wordLength) {
-        handleGuessSubmit();
+        if (isSpPlaying) {
+          handleGuessSubmit();
+        } else if (isMpPlaying) {
+          // In multiplayer, send the guess over the WebSocket
+          if (socket) {
+            socket.send(JSON.stringify({
+              type: 'guess',
+              payload: { guess: currentGuess.toLowerCase() }
+            }));
+            setCurrentGuess(''); // Clear guess immediately
+          }
+        }
       }
     } else if (e.key === 'Backspace') {
       setCurrentGuess(currentGuess.slice(0, -1));
@@ -78,13 +133,87 @@ function App() {
   useEffect(() => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleKeyPress]);
+  }, [handleKeyPress, status]);
+
+  useEffect(() => {
+    // This effect manages the WebSocket connection
+    // It should only depend on the roomId, not the view.
+    if (!roomId) {
+      if (socket) {
+        socket.close();
+        setSocket(null);
+      }
+      return; // No room, no socket.
+    }
+
+    // Connect to the WebSocket server
+    const ws = new WebSocket(`ws://localhost:3001?roomId=${roomId}`);
+    setSocket(ws);
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      if (message.type === 'connected') {
+        setPlayerId(message.playerId);
+      }
+
+      if (message.type === 'game-update') {
+        setMpGameState(message.payload);
+        // No need to change view, we are already in 'mp-game'
+      }
+
+      if (message.type === 'game-start') {
+        setMpGameState(message.payload);
+        setView('mp-game');
+      } else if (message.type === 'error') {
+        setError(message.message);
+        setView('mp-menu'); // Send user back to the menu on error
+      }
+    };
+
+    // Cleanup on unmount
+    return () => {
+      ws.close();
+    };
+  }, [roomId]);
+
+  // Sort players to ensure "Your Board" is always first.
+  const sortedPlayers = mpGameState?.players.slice().sort((a, b) => {
+    if (a.id === playerId) return -1;
+    if (b.id === playerId) return 1;
+    return 0;
+  });
+
+  const getMatchResult = () => {
+    if (!mpGameState || mpGameState.status !== 'finished' || !playerId) {
+      return null;
+    }
+
+    const myPlayer = mpGameState.players.find(p => p.id === playerId);
+    const opponentPlayer = mpGameState.players.find(p => p.id !== playerId);
+
+    if (!myPlayer || !opponentPlayer) return "Game Over";
+
+    const iWon = myPlayer.status === 'win';
+    const opponentWon = opponentPlayer.status === 'win';
+
+    if (iWon && !opponentWon) return "You Win!";
+    if (!iWon && opponentWon) return "You Lose!";
+    return "It's a Tie!";
+  };
+
   return (
     <div className="app-container">
       <header>
-        <h1>{gameMode === 'cheating' ? 'Cheating Wordle' : 'Wordle'}</h1>
+        <h1>
+          {gameMode === 'cheating' && 'Cheating Wordle'}
+          {gameMode === 'normal' && 'Wordle'}
+          {gameMode === 'multiplayer' && 'Multiplayer Wordle'}
+          {!gameMode && 'Wordle'}
+        </h1>
       </header>
-      {gameId ? (
+
+      {view === 'sp-game' && gameId && (
         <main className="game-container">
           <Board
             guesses={guesses}
@@ -98,12 +227,21 @@ function App() {
           {status === 'loss' && <div className="game-over-message">You lost! The word was: {answer?.toUpperCase()}</div>}
           {(status === 'win' || status === 'loss') &&
             <button onClick={() => {
+              // Reset all game-related state
               setGameId(null);
               setGameMode(null);
+              setGuesses([]);
+              setResults([]);
+              setCurrentGuess('');
+              setStatus(null);
+              setAnswer(null);
+              setView('menu');
             }}>Play Again</button>
           }
         </main>
-      ) : (
+      )}
+
+      {view === 'menu' && (
         <main className="game-container pre-game-container">
           <p>Select a mode to start!</p>
           {status === 'loading' ? (
@@ -112,10 +250,96 @@ function App() {
             <div className="button-group">
               <button onClick={() => handleNewGame(false)}>Normal Wordle</button>
               <button onClick={() => handleNewGame(true)}>Cheating Wordle</button>
+              <button onClick={() => { setGameMode('multiplayer'); setView('mp-menu'); setError(null); }}>Multiplayer</button>
             </div>
           )}
           {error && <div className="error-message">{error}</div>}
         </main>
+      )}
+
+      {view === 'mp-menu' && (
+        <main className="game-container pre-game-container">
+          <div className="mp-section" style={{ textAlign: 'left' }}>
+            <h2>Multiplayer Game</h2>
+            <p>Enter a 5-letter word for your opponent to guess.</p>
+            <input
+              type="text"
+              placeholder="Your Word"
+              maxLength={5}
+              value={mpWord}
+              onChange={(e) => setMpWord(e.target.value)}
+              style={{ textTransform: 'uppercase' }}
+            />
+            <label>
+              <input
+                type="checkbox"
+                checked={isJoiningRoom}
+                onChange={(e) => setIsJoiningRoom(e.target.checked)}
+              />
+              Join an existing room
+            </label>
+            {isJoiningRoom && (
+              <input
+                type="text"
+                placeholder="Room ID"
+                value={roomIdInput}
+                onChange={(e) => setRoomIdInput(e.target.value)}
+              />
+            )}
+            <button onClick={isJoiningRoom ? handleJoinRoom : handleCreateRoom}>
+              {isJoiningRoom ? 'Join Room' : 'Create Room'}
+            </button>
+          </div>
+          {error && <div className="error-message">{error}</div>}
+          <button onClick={() => setView('menu')}>Back to Menu</button>
+        </main>
+      )}
+
+      {view === 'mp-waiting' && (
+        <main className="game-container pre-game-container">
+          <h2>Room ID: {roomId}</h2>
+          <p>Waiting for opponent to join and start the game...</p>
+          <p>Share this ID with your friend!</p>
+        </main>
+      )}
+
+      {view === 'mp-game' && mpGameState && (
+        <div>
+          <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', width: '100%' }}>
+            {sortedPlayers?.map(player => (
+              <main className="game-container" key={player.id}>
+                <h2>{player.id === playerId ? 'Your Board' : 'Opponent\'s Board'}</h2>
+                <Board
+                  guesses={player.guesses}
+                  results={player.results}
+                  // Only show the current typed guess on your own board
+                  currentGuess={player.id === playerId ? currentGuess : ''}
+                  maxGuesses={maxGuesses}
+                  wordLength={wordLength}
+                />
+              </main>
+            ))}
+          </div>
+          {mpGameState.status === 'finished' && (
+            <div className="game-over-message">
+              {getMatchResult()}
+              <div>
+                <button onClick={() => {
+                  // Reset all multiplayer and view state
+                  setView('menu');
+                  setRoomId(null);
+                  setRoomIdInput('');
+                  setMpWord('');
+                  setIsJoiningRoom(false);
+                  setPlayerId(null);
+                  setMpGameState(null);
+                  setError(null);
+                  setGameMode(null);
+                }}>Back to Menu</button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

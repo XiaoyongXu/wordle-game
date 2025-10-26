@@ -21,8 +21,9 @@ export class WordleGame {
    * @param answerList The list of possible 5-letter answer words.
    * @param maxGuesses The maximum number of rounds before game over.
    * @param isCheating If true, the game will not pick an answer and will actively try to make the game harder.
+   * @param answer (Optional) A specific answer to use, for multiplayer.
    */
-  constructor(answerList: string[], maxGuesses: number = 6, isCheating: boolean = false) {
+  constructor(answerList: string[], maxGuesses: number = 6, isCheating: boolean = false, answer?: string) {
     // We store the list for potential validation
     this.answerList = answerList;
     this.maxGuesses = maxGuesses;
@@ -32,6 +33,8 @@ export class WordleGame {
     if (this.isCheating) {
       this.candidateWords = [...answerList];
       this.answer = ''; // No answer is set in cheating mode initially
+    } else if (answer) {
+      this.answer = answer;
     } else {
       this.answer = this.selectRandomWord();
     }

@@ -12,3 +12,18 @@ export interface GameStateResponse {
   status: GameStatus;
   answer?: string;
 }
+
+export type MatchStatus = 'waiting' | 'playing' | 'finished';
+
+export interface PlayerState {
+  id: string;
+  guesses: string[];
+  results: LetterState[][];
+  status: GameStatus;
+}
+
+export interface MultiplayerGameState {
+  roomId: string;
+  status: MatchStatus;
+  players: PlayerState[];
+}
