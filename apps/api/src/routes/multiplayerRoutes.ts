@@ -11,8 +11,9 @@ const router = Router();
 router.post('/create', (req, res) => {
   const { word } = req.body;
 
-  if (!word || word.length !== 5 || !WORDS.includes(word.toLowerCase())) {
-    return res.status(400).json({ message: 'A valid 5-letter word is required.' });
+  // If a word is provided, it must be valid. If not, it's a race/random game.
+  if (word && (word.length !== 5 || !WORDS.includes(word.toLowerCase()))) {
+    return res.status(400).json({ message: 'Provided word is not a valid 5-letter word.' });
   }
 
   const roomId = uuidv4().slice(0, 6); // A shorter, more shareable ID
@@ -20,7 +21,7 @@ router.post('/create', (req, res) => {
   multiplayerGames.set(roomId, room);
 
   // Set the word that Player 2 will have to guess.
-  room.setWordForPlayer2(word.toLowerCase());
+  room.setWordForPlayer2(word ? word.toLowerCase() : null);
 
   res.status(201).json({ roomId });
 });
@@ -29,8 +30,9 @@ router.post('/create', (req, res) => {
 router.post('/join', (req, res) => {
   const { roomId, word } = req.body;
 
-  if (!word || word.length !== 5 || !WORDS.includes(word.toLowerCase())) {
-    return res.status(400).json({ message: 'A valid 5-letter word is required.' });
+  // If a word is provided, it must be valid.
+  if (word && (word.length !== 5 || !WORDS.includes(word.toLowerCase()))) {
+    return res.status(400).json({ message: 'Provided word is not a valid 5-letter word.' });
   }
 
   const room = multiplayerGames.get(roomId);
@@ -43,7 +45,7 @@ router.post('/join', (req, res) => {
   }
 
   // Set the word that Player 1 will have to guess.
-  room.setWordForPlayer1(word.toLowerCase());
+  room.setWordForPlayer1(word ? word.toLowerCase() : null);
 
   res.status(200).json({ message: 'Room is valid. Establish WebSocket connection to start.' });
 });

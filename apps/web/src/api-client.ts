@@ -39,6 +39,7 @@ export interface PlayerState {
   guesses: string[];
   results: LetterState[][];
   status: GameStatus;
+  answer?: string;
 }
 
 export interface MultiplayerGameState {

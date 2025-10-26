@@ -59,10 +59,15 @@ export function initializeWebSocket(server: Server) {
         if (data.type === 'guess' && room) {
           const player = room.players.get(playerId);
           if (player) {
-            // Process the guess using the player's game instance
-            player.game.submitGuess(data.payload.guess);
-            // Broadcast the updated state to everyone in the room
-            broadcastGameState(room, 'game-update');
+            try {
+              // Process the guess using the player's game instance
+              player.game.submitGuess(data.payload.guess);
+              // If successful, broadcast the updated state to everyone
+              broadcastGameState(room, 'game-update');
+            } catch (err) {
+              // If the guess is invalid, send an error message back only to the sender.
+              ws.send(JSON.stringify({ type: 'error', message: (err as Error).message }));
+            }
           }
         }
       } catch (error) {
@@ -90,6 +95,7 @@ function broadcastGameState(room: Room, type: 'game-start' | 'game-update' = 'ga
       guesses: gameState.guesses,
       results: gameState.results,
       status: gameState.status,
+      answer: gameState.answer,
     });
   }
 

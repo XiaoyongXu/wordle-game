@@ -108,6 +108,7 @@ function App() {
       /^[a-zA-Z]$/.test(e.key)
     ) {
       setCurrentGuess(currentGuess + e.key.toUpperCase());
+      setError(null); // Clear error on new input
     }
   };
 
@@ -167,7 +168,6 @@ function App() {
         setView('mp-game');
       } else if (message.type === 'error') {
         setError(message.message);
-        setView('mp-menu'); // Send user back to the menu on error
       }
     };
 
@@ -198,7 +198,7 @@ function App() {
     const opponentWon = opponentPlayer.status === 'win';
 
     if (iWon && !opponentWon) return "You Win!";
-    if (!iWon && opponentWon) return "You Lose!";
+    if (!iWon && opponentWon) return `You Lose! The word was: ${myPlayer.answer?.toUpperCase()}`;
     return "It's a Tie!";
   };
 
@@ -236,7 +236,7 @@ function App() {
               setStatus(null);
               setAnswer(null);
               setView('menu');
-            }}>Play Again</button>
+            }}>Back to Menu</button>
           }
         </main>
       )}
@@ -261,7 +261,7 @@ function App() {
         <main className="game-container pre-game-container">
           <div className="mp-section" style={{ textAlign: 'left' }}>
             <h2>Multiplayer Game</h2>
-            <p>Enter a 5-letter word for your opponent to guess.</p>
+            <p>Enter a 5-letter word for your opponent to guess. (Leave blank for a random word)</p>
             <input
               type="text"
               placeholder="Your Word"
@@ -305,6 +305,8 @@ function App() {
 
       {view === 'mp-game' && mpGameState && (
         <div>
+          {/* Display error messages for multiplayer mode */}
+          {error && <div className="error-message" style={{ textAlign: 'center' }}>{error}</div>}
           <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', width: '100%' }}>
             {sortedPlayers?.map(player => (
               <main className="game-container" key={player.id}>

@@ -9,7 +9,7 @@ export class Player {
   public game: WordleGame;
   public ws: WebSocket;
 
-  constructor(id: string, ws: WebSocket, opponentWord: string, wordList: string[]) {
+  constructor(id: string, ws: WebSocket, opponentWord: string | undefined, wordList: string[]) {
     this.id = id;
     this.ws = ws;
     // Each player's game is an instance of WordleGame with the opponent's word.
@@ -25,8 +25,8 @@ export class Room {
   public players: Map<string, Player> = new Map();
 
   // The word provided by the first player, to be used by the second.
-  private wordForPlayer2: string;
-  private wordForPlayer1: string;
+  private wordForPlayer2: string | null;
+  private wordForPlayer1: string | null;
   private wordList: string[];
 
   constructor(id: string, wordList: string[]) {
@@ -36,11 +36,16 @@ export class Room {
     this.wordForPlayer2 = '';
   }
 
-  public setWordForPlayer2(word: string) {
+  private selectRandomWord(): string {
+    const index = Math.floor(Math.random() * this.wordList.length);
+    return this.wordList[index];
+  }
+
+  public setWordForPlayer2(word: string | null) {
     this.wordForPlayer2 = word;
   }
 
-  public setWordForPlayer1(word: string) {
+  public setWordForPlayer1(word: string | null) {
     this.wordForPlayer1 = word;
   }
 
@@ -58,19 +63,38 @@ export class Room {
   * Adds the second player (joiner) and finalizes the room setup.
   */
   addPlayer2(playerId: string, ws: WebSocket) {
-    if (this.players.size !== 1 || !this.wordForPlayer1 || !this.wordForPlayer2) {
+    if (this.players.size !== 1) {
       throw new Error("Room is not in a valid state to add a second player.");
     }
 
-    // 1. Finalize Player 1's game instance with the word provided by Player 2.
+    let answerForP1: string | undefined;
+    let answerForP2: string | undefined;
+
+    if (this.wordForPlayer1 && this.wordForPlayer2) {
+      // Scenario 1: Both players provided words (Head-to-Head)
+      answerForP1 = this.wordForPlayer1;
+      answerForP2 = this.wordForPlayer2;
+    } else if (!this.wordForPlayer1 && !this.wordForPlayer2) {
+      // Scenario 2: Neither player provided a word (Race Mode)
+      const sharedWord = this.selectRandomWord();
+      answerForP1 = sharedWord;
+      answerForP2 = sharedWord;
+    } else {
+      // Scenario 3: One player provided a word
+      // The word for Player 1 to guess is the one provided by Player 2.
+      // If Player 2 provided nothing, this will be undefined, and WordleGame will pick a random word.
+      answerForP1 = this.wordForPlayer1 ?? undefined;
+      // The word for Player 2 to guess is the one provided by Player 1.
+      answerForP2 = this.wordForPlayer2 ?? undefined;
+    }
+
     const player1 = this.players.values().next().value;
     if (!player1) {
       throw new Error("Could not find the original player in the room.");
     }
-    player1.game = new WordleGame(this.wordList, 6, false, this.wordForPlayer1);
+    player1.game = new WordleGame(this.wordList, 6, false, answerForP1);
 
-    // 2. Create Player 2's game instance with the word provided by Player 1.
-    const player2 = new Player(playerId, ws, this.wordForPlayer2, this.wordList);
+    const player2 = new Player(playerId, ws, answerForP2, this.wordList);
     this.players.set(playerId, player2);
   }
 }
