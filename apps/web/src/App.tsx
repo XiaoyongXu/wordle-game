@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import "./App.css";
 import { Board } from "./components/Board";
 import {
@@ -15,6 +15,7 @@ import type {
 } from "./api-client.ts";
 import { loadStats, saveStats, updateStats } from "./statsService";
 import { StatsModal } from "./components/StatsModal";
+import { Keyboard } from "./components/Keyboard.tsx";
 
 function App() {
   // 'menu' | 'sp-game' | 'mp-menu' | 'mp-waiting' | 'mp-game'
@@ -94,7 +95,7 @@ function App() {
     }
   };
 
-  const handleKeyPress = (e: KeyboardEvent) => {
+  const handleVirtualKeyPress = (key: string) => {
     // Determine if the game is active, for either mode.
     const isSpPlaying = view === "sp-game" && status === "playing";
     const myMpPlayer = mpGameState?.players.find((p) => p.id === playerId);
@@ -104,7 +105,7 @@ function App() {
       return;
     }
 
-    if (e.key === "Enter") {
+    if (key === "ENTER") {
       if (currentGuess.length === wordLength) {
         if (isSpPlaying) {
           handleGuessSubmit();
@@ -121,11 +122,19 @@ function App() {
           }
         }
       }
-    } else if (e.key === "Backspace") {
+    } else if (key === "BACKSPACE") {
       setCurrentGuess(currentGuess.slice(0, -1));
-    } else if (currentGuess.length < wordLength && /^[a-zA-Z]$/.test(e.key)) {
-      setCurrentGuess(currentGuess + e.key.toUpperCase());
+    } else if (currentGuess.length < wordLength && /^[a-zA-Z]$/.test(key)) {
+      setCurrentGuess(currentGuess + key.toUpperCase());
       setError(null); // Clear error on new input
+    }
+  };
+
+  const handleKeyPress = (e: KeyboardEvent) => {
+    // Remap physical keyboard events to virtual key presses
+    const key = e.key.toUpperCase();
+    if (key === 'ENTER' || key === 'BACKSPACE' || (key.length === 1 && key >= 'A' && key <= 'Z')) {
+      handleVirtualKeyPress(key);
     }
   };
 
@@ -162,7 +171,7 @@ function App() {
   useEffect(() => {
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [handleKeyPress, status]);
+  }, [handleVirtualKeyPress, status, view, mpGameState]);
 
   useEffect(() => {
     // This effect manages the WebSocket connection
@@ -211,6 +220,28 @@ function App() {
     if (b.id === playerId) return 1;
     return 0;
   });
+
+  const keyStates = useMemo(() => {
+    const states: { [key: string]: LetterState } = {};
+    const allResults = view === 'sp-game' ? results : (mpGameState?.players.find(p => p.id === playerId)?.results || []);
+    const allGuesses = view === 'sp-game' ? guesses : (mpGameState?.players.find(p => p.id === playerId)?.guesses || []);
+
+    for (let i = 0; i < allResults.length; i++) {
+      for (let j = 0; j < allResults[i].length; j++) {
+        const char = allGuesses[i][j];
+        const result = allResults[i][j];
+
+        // Green ('hit') is the highest priority
+        if (states[char] === 'hit') continue;
+        // Yellow ('present') is the next highest
+        if (states[char] === 'present' && result !== 'hit') continue;
+
+        states[char] = result;
+      }
+    }
+
+    return states;
+  }, [results, mpGameState, playerId, view, guesses]);
 
   const getMatchResult = () => {
     if (!mpGameState || mpGameState.status !== "finished" || !playerId) {
@@ -283,6 +314,7 @@ function App() {
             maxGuesses={maxGuesses}
             wordLength={wordLength}
           />
+          <Keyboard keyStates={keyStates} onKeyPress={handleVirtualKeyPress} />
           {error && <div className="error-message">{error}</div>}
           {status === "win" && (
             <div className="game-over-message">You won!</div>
@@ -454,6 +486,7 @@ function App() {
                   maxGuesses={maxGuesses}
                   wordLength={wordLength}
                 />
+                {player.id === playerId && <Keyboard keyStates={keyStates} onKeyPress={handleVirtualKeyPress} />}
               </main>
             ))}
           </div>

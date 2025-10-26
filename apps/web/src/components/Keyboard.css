@@ -1,0 +1,44 @@
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2rem;
+  width: 100%;
+}
+
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.key {
+  font-family: inherit;
+  font-weight: bold;
+  border: 0;
+  padding: 0;
+  height: 58px;
+  flex-grow: 1;
+  border-radius: 4px;
+  background-color: #d3d6da;
+  color: var(--color-text);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-transform: uppercase;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.3);
+}
+
+.key:hover {
+  background-color: #c9ccd1;
+}
+
+.key.special-key {
+  flex-grow: 1.5;
+  font-size: 0.8rem;
+}
+
+.key.hit { background-color: var(--color-hit); color: white; }
+.key.present { background-color: var(--color-present); color: white; }
+.key.miss { background-color: var(--color-miss); color: white; }
