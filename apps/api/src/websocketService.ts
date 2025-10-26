@@ -100,13 +100,28 @@ function broadcastGameState(room: Room, type: 'game-start' | 'game-update' = 'ga
   }
 
   // Determine the overall match status
-  const isFinished = playerStates.every(p => p.status === 'win' || p.status === 'loss');
+  let isFinished = playerStates.every(p => p.status === 'win' || p.status === 'loss');
+
+  // In race mode, if one player wins, the game ends immediately for both.
+  if (room.gameType === 'race' && !isFinished) {
+    const winner = playerStates.find(p => p.status === 'win');
+    if (winner) {
+      isFinished = true;
+      // Find the other player and set their status to 'loss'
+      const loser = playerStates.find(p => p.id !== winner.id);
+      if (loser && loser.status === 'playing') {
+        loser.status = 'loss';
+      }
+    }
+  }
+
   const matchStatus: MatchStatus = isFinished ? 'finished' : 'playing';
 
   const multiplayerState: MultiplayerGameState = {
     roomId: room.id,
     status: matchStatus,
     players: playerStates,
+    gameType: room.gameType as 'race' | 'head-to-head',
   };
 
   const message = JSON.stringify({

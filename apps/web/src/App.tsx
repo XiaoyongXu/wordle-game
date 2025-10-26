@@ -1,51 +1,64 @@
-import { useState, useEffect, useCallback } from 'react';
-import './App.css';
-import { Board } from './components/Board';
-import { startNewGame, submitGuess, createMultiplayerGame, joinMultiplayerGame } from './api-client.ts';
-import type { LetterState, GameStatus, MultiplayerGameState } from './api-client.ts';
+import { useState, useEffect, useCallback } from "react";
+import "./App.css";
+import { Board } from "./components/Board";
+import {
+  startNewGame,
+  submitGuess,
+  createMultiplayerGame,
+  joinMultiplayerGame,
+} from "./api-client.ts";
+import type {
+  LetterState,
+  GameStatus,
+  MultiplayerGameState,
+} from "./api-client.ts";
 
 function App() {
   // 'menu' | 'sp-game' | 'mp-menu' | 'mp-waiting' | 'mp-game'
-  const [view, setView] = useState('menu');
+  const [view, setView] = useState("menu");
   const [gameId, setGameId] = useState<string | null>(null);
   const [guesses, setGuesses] = useState<string[]>([]);
   const [results, setResults] = useState<LetterState[][]>([]);
-  const [currentGuess, setCurrentGuess] = useState('');
-  const [status, setStatus] = useState<GameStatus | 'loading' | null>(null);
+  const [currentGuess, setCurrentGuess] = useState("");
+  const [status, setStatus] = useState<GameStatus | "loading" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
-  const [gameMode, setGameMode] = useState<'normal' | 'cheating' | 'multiplayer' | null>(null);
+  const [gameMode, setGameMode] = useState<
+    "normal" | "cheating" | "multiplayer" | null
+  >(null);
 
   // State for multiplayer
   const [roomId, setRoomId] = useState<string | null>(null);
-  const [mpWord, setMpWord] = useState('');
+  const [mpWord, setMpWord] = useState("");
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
-  const [roomIdInput, setRoomIdInput] = useState('');
+  const [roomIdInput, setRoomIdInput] = useState("");
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [mpGameState, setMpGameState] = useState<MultiplayerGameState | null>(null);
+  const [mpGameState, setMpGameState] = useState<MultiplayerGameState | null>(
+    null
+  );
 
   // Configurable game settings, fetched from server
   const [wordLength, setWordLength] = useState(5);
   const [maxGuesses, setMaxGuesses] = useState(6);
 
   const handleNewGame = useCallback(async (isCheating: boolean) => {
-    setStatus('loading');
+    setStatus("loading");
     setError(null);
     setGuesses([]);
     setResults([]);
-    setCurrentGuess('');
+    setCurrentGuess("");
     setAnswer(null);
-    setGameMode(isCheating ? 'cheating' : 'normal');
+    setGameMode(isCheating ? "cheating" : "normal");
     try {
       const newGame = await startNewGame(isCheating);
       setGameId(newGame.gameId);
       setWordLength(newGame.wordLength);
       setMaxGuesses(newGame.maxGuesses);
-      setView('sp-game');
-      setStatus('playing');
+      setView("sp-game");
+      setStatus("playing");
     } catch (err) {
-      setError('Failed to start a new game. Please try again.');
+      setError("Failed to start a new game. Please try again.");
       // Reset gameMode if the API call fails
       setGameMode(null);
     }
@@ -56,7 +69,7 @@ function App() {
     try {
       const { roomId } = await createMultiplayerGame(mpWord.toLowerCase());
       setRoomId(roomId);
-      setView('mp-waiting');
+      setView("mp-waiting");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -70,7 +83,7 @@ function App() {
       await joinMultiplayerGame(roomIdInput, mpWord.toLowerCase());
       // If successful, set the real roomId to trigger the WebSocket connection
       setRoomId(roomIdInput);
-      setView('mp-waiting');
+      setView("mp-waiting");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -78,35 +91,34 @@ function App() {
 
   const handleKeyPress = (e: KeyboardEvent) => {
     // Determine if the game is active, for either mode.
-    const isSpPlaying = view === 'sp-game' && status === 'playing';
-    const myMpPlayer = mpGameState?.players.find(p => p.id === playerId);
-    const isMpPlaying = view === 'mp-game' && myMpPlayer?.status === 'playing';
+    const isSpPlaying = view === "sp-game" && status === "playing";
+    const myMpPlayer = mpGameState?.players.find((p) => p.id === playerId);
+    const isMpPlaying = view === "mp-game" && myMpPlayer?.status === "playing";
 
     if (!isSpPlaying && !isMpPlaying) {
       return;
     }
 
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       if (currentGuess.length === wordLength) {
         if (isSpPlaying) {
           handleGuessSubmit();
         } else if (isMpPlaying) {
           // In multiplayer, send the guess over the WebSocket
           if (socket) {
-            socket.send(JSON.stringify({
-              type: 'guess',
-              payload: { guess: currentGuess.toLowerCase() }
-            }));
-            setCurrentGuess(''); // Clear guess immediately
+            socket.send(
+              JSON.stringify({
+                type: "guess",
+                payload: { guess: currentGuess.toLowerCase() },
+              })
+            );
+            setCurrentGuess(""); // Clear guess immediately
           }
         }
       }
-    } else if (e.key === 'Backspace') {
+    } else if (e.key === "Backspace") {
       setCurrentGuess(currentGuess.slice(0, -1));
-    } else if (
-      currentGuess.length < wordLength &&
-      /^[a-zA-Z]$/.test(e.key)
-    ) {
+    } else if (currentGuess.length < wordLength && /^[a-zA-Z]$/.test(e.key)) {
       setCurrentGuess(currentGuess + e.key.toUpperCase());
       setError(null); // Clear error on new input
     }
@@ -117,7 +129,7 @@ function App() {
     const response = await submitGuess(gameId, currentGuess);
     // This "in" check is a type guard. It tells TypeScript that if 'message'
     // exists, 'response' is of type 'ErrorResponse'.
-    if ('message' in response) {
+    if ("message" in response) {
       setError(response.message);
       return;
     }
@@ -127,13 +139,13 @@ function App() {
     setGuesses(response.guesses);
     setResults(response.results);
     setStatus(response.status);
-    setCurrentGuess('');
+    setCurrentGuess("");
     setAnswer(response.answer ?? null);
   };
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
   }, [handleKeyPress, status]);
 
   useEffect(() => {
@@ -154,19 +166,19 @@ function App() {
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
 
-      if (message.type === 'connected') {
+      if (message.type === "connected") {
         setPlayerId(message.playerId);
       }
 
-      if (message.type === 'game-update') {
+      if (message.type === "game-update") {
         setMpGameState(message.payload);
         // No need to change view, we are already in 'mp-game'
       }
 
-      if (message.type === 'game-start') {
+      if (message.type === "game-start") {
         setMpGameState(message.payload);
-        setView('mp-game');
-      } else if (message.type === 'error') {
+        setView("mp-game");
+      } else if (message.type === "error") {
         setError(message.message);
       }
     };
@@ -185,36 +197,66 @@ function App() {
   });
 
   const getMatchResult = () => {
-    if (!mpGameState || mpGameState.status !== 'finished' || !playerId) {
+    if (!mpGameState || mpGameState.status !== "finished" || !playerId) {
       return null;
     }
 
-    const myPlayer = mpGameState.players.find(p => p.id === playerId);
-    const opponentPlayer = mpGameState.players.find(p => p.id !== playerId);
+    const myPlayer = mpGameState.players.find((p) => p.id === playerId);
+    const opponentPlayer = mpGameState.players.find((p) => p.id !== playerId);
 
     if (!myPlayer || !opponentPlayer) return "Game Over";
 
-    const iWon = myPlayer.status === 'win';
-    const opponentWon = opponentPlayer.status === 'win';
+    const iWon = myPlayer.status === "win";
+    const opponentWon = opponentPlayer.status === "win";
 
-    if (iWon && !opponentWon) return "You Win!";
-    if (!iWon && opponentWon) return `You Lose! The word was: ${myPlayer.answer?.toUpperCase()}`;
-    return "It's a Tie!";
+    // Scenario 1: Tie Conditions
+    if (
+      (iWon &&
+        opponentWon &&
+        myPlayer.guesses.length === opponentPlayer.guesses.length) ||
+      (!iWon && !opponentWon)
+    ) {
+      return "It's a Tie!";
+    }
+
+    // Scenario 2: Win/Loss Conditions
+    if (iWon && !opponentWon) {
+      return "You Win!";
+    }
+    if (!iWon && opponentWon) {
+      return `You Lose! The word was: ${myPlayer.answer?.toUpperCase()}`;
+    }
+
+    // Scenario 3: Both won, but in different rounds
+    if (iWon && opponentWon) {
+      return myPlayer.guesses.length < opponentPlayer.guesses.length
+        ? "You Win!"
+        : "You Lose!";
+    }
+
+    return "Game Over"; // Fallback
   };
 
   return (
     <div className="app-container">
       <header>
         <h1>
-          {gameMode === 'cheating' && 'Cheating Wordle'}
-          {gameMode === 'normal' && 'Wordle'}
-          {gameMode === 'multiplayer' && 'Multiplayer Wordle'}
-          {!gameMode && 'Wordle'}
+          {gameMode === "cheating" && "Cheating Wordle"}
+          {gameMode === "normal" && "Wordle"}
+          {gameMode === "multiplayer" && "Multiplayer Wordle"}
+          {!gameMode && "Wordle"}
         </h1>
       </header>
 
-      {view === 'sp-game' && gameId && (
+      {view === "sp-game" && gameId && (
         <main className="game-container">
+          <div className="instructions">
+            <p>Guess the 5-letter word in 6 tries.</p>
+            <p>
+              Tile colors show how close your guess was: <b>Hit (green)</b>,{" "}
+              <b>Present (yellow)</b>, <b>Miss (gray)</b>.
+            </p>
+          </div>
           <Board
             guesses={guesses}
             results={results}
@@ -223,52 +265,85 @@ function App() {
             wordLength={wordLength}
           />
           {error && <div className="error-message">{error}</div>}
-          {status === 'win' && <div className="game-over-message">You won!</div>}
-          {status === 'loss' && <div className="game-over-message">You lost! The word was: {answer?.toUpperCase()}</div>}
-          {(status === 'win' || status === 'loss') &&
-            <button onClick={() => {
-              // Reset all game-related state
-              setGameId(null);
-              setGameMode(null);
-              setGuesses([]);
-              setResults([]);
-              setCurrentGuess('');
-              setStatus(null);
-              setAnswer(null);
-              setView('menu');
-            }}>Back to Menu</button>
-          }
+          {status === "win" && (
+            <div className="game-over-message">You won!</div>
+          )}
+          {status === "loss" && (
+            <div className="game-over-message">
+              You lost! The word was: {answer?.toUpperCase()}
+            </div>
+          )}
+          {(status === "win" || status === "loss") && (
+            <button
+              onClick={() => {
+                // Reset all game-related state
+                setGameId(null);
+                setGameMode(null);
+                setGuesses([]);
+                setResults([]);
+                setCurrentGuess("");
+                setStatus(null);
+                setAnswer(null);
+                setView("menu");
+              }}
+            >
+              Back to Menu
+            </button>
+          )}
         </main>
       )}
 
-      {view === 'menu' && (
+      {view === "menu" && (
         <main className="game-container pre-game-container">
           <p>Select a mode to start!</p>
-          {status === 'loading' ? (
+          {status === "loading" ? (
             <p>Loading...</p>
           ) : (
             <div className="button-group">
-              <button onClick={() => handleNewGame(false)}>Normal Wordle</button>
-              <button onClick={() => handleNewGame(true)}>Cheating Wordle</button>
-              <button onClick={() => { setGameMode('multiplayer'); setView('mp-menu'); setError(null); }}>Multiplayer</button>
+              <button onClick={() => handleNewGame(false)}>
+                Normal Wordle
+              </button>
+              <button onClick={() => handleNewGame(true)}>
+                Cheating Wordle
+              </button>
+              <button
+                onClick={() => {
+                  setGameMode("multiplayer");
+                  setView("mp-menu");
+                  setError(null);
+                }}
+              >
+                Multiplayer
+              </button>
             </div>
           )}
+          <footer
+            style={{ marginTop: "2rem", fontSize: "0.8rem", color: "#888" }}
+          >
+            <p>
+              Word list sourced from:
+              https://darkermango.github.io/5-Letter-words/words.json
+            </p>
+          </footer>
           {error && <div className="error-message">{error}</div>}
         </main>
       )}
 
-      {view === 'mp-menu' && (
+      {view === "mp-menu" && (
         <main className="game-container pre-game-container">
-          <div className="mp-section" style={{ textAlign: 'left' }}>
+          <div className="mp-section" style={{ textAlign: "left" }}>
             <h2>Multiplayer Game</h2>
-            <p>Enter a 5-letter word for your opponent to guess. (Leave blank for a random word)</p>
+            <p>
+              Enter a 5-letter word for your opponent to guess. (Leave blank for
+              a random word)
+            </p>
             <input
               type="text"
               placeholder="Your Word"
               maxLength={5}
               value={mpWord}
               onChange={(e) => setMpWord(e.target.value)}
-              style={{ textTransform: 'uppercase' }}
+              style={{ textTransform: "uppercase" }}
             />
             <label>
               <input
@@ -287,15 +362,15 @@ function App() {
               />
             )}
             <button onClick={isJoiningRoom ? handleJoinRoom : handleCreateRoom}>
-              {isJoiningRoom ? 'Join Room' : 'Create Room'}
+              {isJoiningRoom ? "Join Room" : "Create Room"}
             </button>
           </div>
           {error && <div className="error-message">{error}</div>}
-          <button onClick={() => setView('menu')}>Back to Menu</button>
+          <button onClick={() => setView("menu")}>Back to Menu</button>
         </main>
       )}
 
-      {view === 'mp-waiting' && (
+      {view === "mp-waiting" && (
         <main className="game-container pre-game-container">
           <h2>Room ID: {roomId}</h2>
           <p>Waiting for opponent to join and start the game...</p>
@@ -303,41 +378,82 @@ function App() {
         </main>
       )}
 
-      {view === 'mp-game' && mpGameState && (
+      {view === "mp-game" && mpGameState && (
         <div>
           {/* Display error messages for multiplayer mode */}
-          {error && <div className="error-message" style={{ textAlign: 'center' }}>{error}</div>}
-          <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', width: '100%' }}>
-            {sortedPlayers?.map(player => (
+          {error && (
+            <div className="error-message" style={{ textAlign: "center" }}>
+              {error}
+            </div>
+          )}
+          <div className="instructions">
+            {mpGameState.gameType === "race" ? (
+              <>
+                <p>
+                  <b>Race Mode:</b> You and your opponent are guessing the same
+                  word. The first player to find it wins!
+                </p>
+                <p>
+                  <b>Tie:</b> A tie occurs if you both run out of guesses.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  <b>Head-to-Head:</b> You are guessing your opponent's word.
+                  The player who uses fewer guesses wins.
+                </p>
+                <p>
+                  <b>Tie:</b> A tie occurs if you both solve it in the same
+                  number of rounds, or if you both fail.
+                </p>
+              </>
+            )}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: "2rem",
+              justifyContent: "center",
+              width: "100%",
+            }}
+          >
+            {sortedPlayers?.map((player) => (
               <main className="game-container" key={player.id}>
-                <h2>{player.id === playerId ? 'Your Board' : 'Opponent\'s Board'}</h2>
+                <h2>
+                  {player.id === playerId ? "Your Board" : "Opponent's Board"}
+                </h2>
                 <Board
                   guesses={player.guesses}
                   results={player.results}
                   // Only show the current typed guess on your own board
-                  currentGuess={player.id === playerId ? currentGuess : ''}
+                  currentGuess={player.id === playerId ? currentGuess : ""}
                   maxGuesses={maxGuesses}
                   wordLength={wordLength}
                 />
               </main>
             ))}
           </div>
-          {mpGameState.status === 'finished' && (
+          {mpGameState.status === "finished" && (
             <div className="game-over-message">
               {getMatchResult()}
               <div>
-                <button onClick={() => {
-                  // Reset all multiplayer and view state
-                  setView('menu');
-                  setRoomId(null);
-                  setRoomIdInput('');
-                  setMpWord('');
-                  setIsJoiningRoom(false);
-                  setPlayerId(null);
-                  setMpGameState(null);
-                  setError(null);
-                  setGameMode(null);
-                }}>Back to Menu</button>
+                <button
+                  onClick={() => {
+                    // Reset all multiplayer and view state
+                    setView("menu");
+                    setRoomId(null);
+                    setRoomIdInput("");
+                    setMpWord("");
+                    setIsJoiningRoom(false);
+                    setPlayerId(null);
+                    setMpGameState(null);
+                    setError(null);
+                    setGameMode(null);
+                  }}
+                >
+                  Back to Menu
+                </button>
               </div>
             </div>
           )}

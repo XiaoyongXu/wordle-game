@@ -27,4 +27,5 @@ export interface MultiplayerGameState {
   roomId: string;
   status: MatchStatus;
   players: PlayerState[];
+  gameType: 'race' | 'head-to-head';
 }

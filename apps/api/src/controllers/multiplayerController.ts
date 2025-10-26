@@ -28,12 +28,14 @@ export class Room {
   private wordForPlayer2: string | null;
   private wordForPlayer1: string | null;
   private wordList: string[];
+  public gameType: 'race' | 'head-to-head' | 'pending' = 'pending';
 
   constructor(id: string, wordList: string[]) {
     this.id = id;
     this.wordList = wordList;
-    this.wordForPlayer1 = '';
-    this.wordForPlayer2 = '';
+    // Initialize as null to be explicit
+    this.wordForPlayer1 = null;
+    this.wordForPlayer2 = null;
   }
 
   private selectRandomWord(): string {
@@ -74,11 +76,13 @@ export class Room {
       // Scenario 1: Both players provided words (Head-to-Head)
       answerForP1 = this.wordForPlayer1;
       answerForP2 = this.wordForPlayer2;
+      this.gameType = 'head-to-head';
     } else if (!this.wordForPlayer1 && !this.wordForPlayer2) {
       // Scenario 2: Neither player provided a word (Race Mode)
       const sharedWord = this.selectRandomWord();
       answerForP1 = sharedWord;
       answerForP2 = sharedWord;
+      this.gameType = 'race';
     } else {
       // Scenario 3: One player provided a word
       // The word for Player 1 to guess is the one provided by Player 2.
@@ -86,6 +90,7 @@ export class Room {
       answerForP1 = this.wordForPlayer1 ?? undefined;
       // The word for Player 2 to guess is the one provided by Player 1.
       answerForP2 = this.wordForPlayer2 ?? undefined;
+      this.gameType = 'head-to-head';
     }
 
     const player1 = this.players.values().next().value;
