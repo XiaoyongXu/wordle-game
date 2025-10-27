@@ -10,7 +10,7 @@ function getTitle(gameMode: GameMode): string {
     case 'cheating':
       return 'Cheating Wordle';
     case 'multiplayer':
-      return 'Multiplayer Wordle';
+      return 'Multiplayer';
     default:
       return 'Wordle'; // Covers 'normal' and null
   }

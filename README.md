@@ -12,63 +12,6 @@ This project is a modern, full-stack implementation of the popular word-guessing
 -   [x] **Bonus: On-Screen Keyboard:** A color-coded, interactive on-screen keyboard for improved usability and mobile-friendliness.
 
 ---
-
-## Screenshots
-
-### Main Menu
-*Allows players to choose between Single Player and Multiplayer modes.*
-
-`[Screenshot of the main menu with Normal, Cheating, and Multiplayer buttons]`
-
-### Single-Player Game
-*The classic Wordle experience with an interactive on-screen keyboard.*
-
-`[Screenshot of a single-player game in progress]`
-
-### Multiplayer Lobby
-*A clean, unified interface for creating or joining a multiplayer room.*
-
-`[Screenshot of the multiplayer menu]`
-
-### Multiplayer Gameplay
-*A side-by-side view of your board and your opponent's board during a match.*
-
-`[Screenshot of a multiplayer game in progress, showing both boards]`
-
-### Player Statistics
-*A modal displaying persistent player stats, including win percentage and guess distribution.*
-
-`[Screenshot of the statistics modal]`
-
----
-
-## Tech Stack
-
--   **Frontend:** React, TypeScript, Vite
--   **Backend:** Node.js, Express, TypeScript
--   **Real-time Communication:** WebSockets (`ws` library)
--   **Monorepo Management:** npm Workspaces, Turbo
-
----
-
-## Project Structure
-
-The project is organized as a monorepo to facilitate code sharing and streamlined development between the client and server.
-
-```
-/
-├── apps/
-│   ├── api/      # Backend Express server and WebSocket logic
-│   └── web/      # Frontend React client application
-├── package.json  # Root configuration for npm workspaces and turbo
-...
-```
-
--   `apps/api`: Contains all server-side logic, including the Express REST API for game management and the WebSocket server for real-time multiplayer communication.
--   `apps/web`: Contains the complete React front-end, including all components, services, and styling.
-
----
-
 ## Getting Started
 
 ### Prerequisites
@@ -97,6 +40,33 @@ npm run dev
 -   The React web client will be available at `http://localhost:5173` (or another port if 5173 is in use).
 
 Open your browser to the web client's address to play the game.
+
+---
+
+## Tech Stack
+
+-   **Frontend:** React, TypeScript, Vite
+-   **Backend:** Node.js, Express, TypeScript
+-   **Real-time Communication:** WebSockets (`ws` library)
+-   **Monorepo Management:** npm Workspaces, Turbo
+
+---
+
+## Project Structure
+
+The project is organized as a monorepo to facilitate code sharing and streamlined development between the client and server.
+
+```bash
+/
+├── apps/
+│   ├── api/      # Backend Express server and WebSocket logic
+│   └── web/      # Frontend React client application
+├── package.json  # Root configuration for npm workspaces and turbo
+...
+```
+
+-   `apps/api`: Contains all server-side logic, including the Express REST API for game management and the WebSocket server for real-time multiplayer communication. [details for the api](app/api/README.md).
+-   `apps/web`: Contains the complete React front-end, including all components, services, and styling. [details for the web](app/web/README.md).
 
 ---
 
@@ -169,6 +139,36 @@ The game mode is dynamically determined based on whether the players provide a c
 ### 2. Multiplayer Disconnection Handling
 -   **Description:** If a player disconnects during a match (e.g., by closing their browser), the server would detect the WebSocket `close` event and immediately notify the remaining player. The opponent's board would update to show a "Disconnected" status, and the remaining player would be declared the winner by forfeit.
 -   **Benefit:** This feature would make the multiplayer mode more robust by gracefully handling a common real-world scenario. It prevents players from being stuck in a broken game and provides clear, immediate feedback, reducing user frustration.
+
+---
+
+## Screenshots
+
+### Main Menu
+*Allows players to choose between Single Player and Multiplayer modes.*
+
+![This is mainMenu](images/mainMenu.png)
+
+### Single-Player Game
+*The classic Wordle experience with an interactive on-screen keyboard.*
+
+![This is singlePlayer](images/singlePlayer.png)
+
+### Multiplayer Lobby
+*A clean, unified interface for creating or joining a multiplayer room.*
+
+![This is multiPlayer lobby](images/multiPlayerLobby.png)
+
+
+### Multiplayer Gameplay
+*A side-by-side view of your board and your opponent's board during a match.*
+
+![This is multiPlayer game](images/multiPlayerGame.png)
+
+### Player Statistics
+*A modal displaying persistent player stats, including win percentage and guess distribution.*
+
+![This is stats](images/stats.png)
 
 ---
 
