@@ -80,6 +80,20 @@ body {
   max-width: 100%;
 }
 
+.multiplayer-boards-container {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.multiplayer-boards-container {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  width: 100%;
+}
+
 .game-container {
   display: flex;
   flex-direction: column;

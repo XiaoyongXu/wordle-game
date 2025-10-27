@@ -465,14 +465,7 @@ function App() {
               </>
             )}
           </div>
-          <div
-            style={{
-              display: "flex",
-              gap: "2rem",
-              justifyContent: "center",
-              width: "100%",
-            }}
-          >
+          <div className="multiplayer-boards-container">
             {sortedPlayers?.map((player) => (
               <main className="game-container" key={player.id}>
                 <h2>
@@ -486,10 +479,10 @@ function App() {
                   maxGuesses={maxGuesses}
                   wordLength={wordLength}
                 />
-                {player.id === playerId && <Keyboard keyStates={keyStates} onKeyPress={handleVirtualKeyPress} />}
               </main>
             ))}
           </div>
+          <Keyboard keyStates={keyStates} onKeyPress={handleVirtualKeyPress} />
           {mpGameState.status === "finished" && (
             <div className="game-over-message">
               {getMatchResult()}
