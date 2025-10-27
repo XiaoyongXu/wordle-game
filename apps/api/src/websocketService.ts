@@ -1,9 +1,9 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
 import { v4 as uuidv4 } from 'uuid';
-import { multiplayerGames } from './routes/multiplayerRoutes';
+import { multiplayerGames } from './controllers/multiplayerController';
 import { PlayerState, MultiplayerGameState, MatchStatus } from './models/types';
-import { Room } from './controllers/multiplayerController';
+import { Room } from './models/multiplayer';
 
 export function initializeWebSocket(server: Server) {
   const wss = new WebSocketServer({ server });
@@ -14,14 +14,14 @@ export function initializeWebSocket(server: Server) {
     const roomId = url.searchParams.get('roomId');
 
     if (!roomId) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Room ID is required.' }));
+      ws.send(JSON.stringify({ type: 'error', message: 'Room ID is required.' }));
       ws.close();
       return;
     }
 
     const room = multiplayerGames.get(roomId);
     if (!room) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Room not found.' }));
+      ws.send(JSON.stringify({ type: 'error', message: 'Room not found.' }));
       ws.close();
       return;
     }
@@ -36,7 +36,7 @@ export function initializeWebSocket(server: Server) {
         // This is the first player (creator)
         room.addPlayer1(playerId, ws);
         // The client will now wait for the 'game-start' event.
-        ws.send(JSON.stringify({ type: 'waiting', message: 'Waiting for opponent...' }));
+        ws.send(JSON.stringify({ type: 'waiting', message: 'Waiting for opponent...' }));
       } else if (room.players.size === 1) {
         // This is the second player (joiner)
         room.addPlayer2(playerId, ws);
@@ -44,7 +44,7 @@ export function initializeWebSocket(server: Server) {
         // Both players are in, start the game and notify both.
         broadcastGameState(room);
       } else {
-        ws.send(JSON.stringify({ type: 'error', message: 'Room is full.' }));
+        ws.send(JSON.stringify({ type: 'error', message: 'Room is full.' }));
         ws.close();
       }
     } catch (error) {
@@ -77,7 +77,7 @@ export function initializeWebSocket(server: Server) {
 
     ws.on('close', () => {
       // Handle player disconnection (optional, but good practice)
-      console.log(`Player ${playerId} disconnected from room ${roomId}`);
+      console.log(`Player ${playerId} disconnected from room ${roomId}`);
       // You could add logic here to notify the other player.
     });
   });

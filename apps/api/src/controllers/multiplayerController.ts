@@ -1,105 +1,47 @@
-import type { WebSocket } from 'ws';
-import { WordleGame } from './wordleController';
+import { Request, Response } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import { Room } from '../models/multiplayer';
+import { words as WORDS } from '../utils/wordsWith5Letters.json';
 
-/**
-* Represents a player in a multiplayer room.
-*/
-export class Player {
-  public readonly id: string;
-  public game: WordleGame;
-  public ws: WebSocket;
+export const multiplayerGames = new Map<string, Room>();
 
-  constructor(id: string, ws: WebSocket, opponentWord: string | undefined, wordList: string[]) {
-    this.id = id;
-    this.ws = ws;
-    // Each player's game is an instance of WordleGame with the opponent's word.
-    this.game = new WordleGame(wordList, 6, false, opponentWord);
-  }
-}
+export const createRoom = (req: Request, res: Response) => {
+  const { word } = req.body;
 
-/**
-* Represents a multiplayer game room.
-*/
-export class Room {
-  public readonly id: string;
-  public players: Map<string, Player> = new Map();
-
-  // The word provided by the first player, to be used by the second.
-  private wordForPlayer2: string | null;
-  private wordForPlayer1: string | null;
-  private wordList: string[];
-  public gameType: 'race' | 'head-to-head' | 'pending' = 'pending';
-
-  constructor(id: string, wordList: string[]) {
-    this.id = id;
-    this.wordList = wordList;
-    // Initialize as null to be explicit
-    this.wordForPlayer1 = null;
-    this.wordForPlayer2 = null;
+  // If a word is provided, it must be valid. If not, it's a race/random game.
+  if (word && (word.length !== 5 || !WORDS.includes(word.toLowerCase()))) {
+    return res.status(400).json({ message: 'Provided word is not a valid 5-letter word.' });
   }
 
-  private selectRandomWord(): string {
-    const index = Math.floor(Math.random() * this.wordList.length);
-    return this.wordList[index];
+  const roomId = uuidv4().slice(0, 6); // A shorter, more shareable ID
+  const room = new Room(roomId, WORDS);
+  multiplayerGames.set(roomId, room);
+
+  // Set the word that Player 2 will have to guess.
+  room.setWordForPlayer2(word ? word.toLowerCase() : null);
+
+  res.status(201).json({ roomId });
+};
+
+export const joinRoom = (req: Request, res: Response) => {
+  const { roomId, word } = req.body;
+
+  // If a word is provided, it must be valid.
+  if (word && (word.length !== 5 || !WORDS.includes(word.toLowerCase()))) {
+    return res.status(400).json({ message: 'Provided word is not a valid 5-letter word.' });
   }
 
-  public setWordForPlayer2(word: string | null) {
-    this.wordForPlayer2 = word;
+  const room = multiplayerGames.get(roomId);
+  if (!room) {
+    return res.status(404).json({ message: 'Room not found.' });
   }
 
-  public setWordForPlayer1(word: string | null) {
-    this.wordForPlayer1 = word;
+  if (room.players.size >= 2) {
+    return res.status(400).json({ message: 'This room is already full.' });
   }
 
-  /**
-  * Adds the first player (creator) to the room.
-  */
-  addPlayer1(playerId: string, ws: WebSocket) {
-    // Player 1's game cannot be fully initialized yet, so we create a placeholder.
-    // The word 'PENDING' is temporary and will be replaced.
-    const player = new Player(playerId, ws, 'PENDING', this.wordList);
-    this.players.set(playerId, player);
-  }
+  // Set the word that Player 1 will have to guess.
+  room.setWordForPlayer1(word ? word.toLowerCase() : null);
 
-  /**
-  * Adds the second player (joiner) and finalizes the room setup.
-  */
-  addPlayer2(playerId: string, ws: WebSocket) {
-    if (this.players.size !== 1) {
-      throw new Error("Room is not in a valid state to add a second player.");
-    }
-
-    let answerForP1: string | undefined;
-    let answerForP2: string | undefined;
-
-    if (this.wordForPlayer1 && this.wordForPlayer2) {
-      // Scenario 1: Both players provided words (Head-to-Head)
-      answerForP1 = this.wordForPlayer1;
-      answerForP2 = this.wordForPlayer2;
-      this.gameType = 'head-to-head';
-    } else if (!this.wordForPlayer1 && !this.wordForPlayer2) {
-      // Scenario 2: Neither player provided a word (Race Mode)
-      const sharedWord = this.selectRandomWord();
-      answerForP1 = sharedWord;
-      answerForP2 = sharedWord;
-      this.gameType = 'race';
-    } else {
-      // Scenario 3: One player provided a word
-      // The word for Player 1 to guess is the one provided by Player 2.
-      // If Player 2 provided nothing, this will be undefined, and WordleGame will pick a random word.
-      answerForP1 = this.wordForPlayer1 ?? undefined;
-      // The word for Player 2 to guess is the one provided by Player 1.
-      answerForP2 = this.wordForPlayer2 ?? undefined;
-      this.gameType = 'head-to-head';
-    }
-
-    const player1 = this.players.values().next().value;
-    if (!player1) {
-      throw new Error("Could not find the original player in the room.");
-    }
-    player1.game = new WordleGame(this.wordList, 6, false, answerForP1);
-
-    const player2 = new Player(playerId, ws, answerForP2, this.wordList);
-    this.players.set(playerId, player2);
-  }
-}
+  res.status(200).json({ message: 'Room is valid. Establish WebSocket connection to start.' });
+};
